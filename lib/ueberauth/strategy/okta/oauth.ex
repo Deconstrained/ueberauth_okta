@@ -69,10 +69,18 @@ defmodule Ueberauth.Strategy.Okta.OAuth do
   end
 
   def get_token(client, params, headers) do
+    {code, params} = Keyword.pop(params, :code, client.params["code"])
+    unless code do
+      raise OAuth2.Error, reason: "Missing required key `code` for `#{inspect(__MODULE__)}`"
+    end
     client
-    |> put_param("client_secret", client.client_secret)
     |> put_header("Accept", "application/json")
-    |> AuthCode.get_token(params, headers)
+    |> put_param(:code, code)
+    |> put_param(:grant_type, "authorization_code")
+    |> put_param(:redirect_uri, client.redirect_uri)
+    |> merge_params(params)
+    |> basic_auth()
+    |> put_headers(headers)
   end
 
   defp userinfo_url() do
