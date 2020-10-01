@@ -1,4 +1,5 @@
 defmodule Ueberauth.Strategy.Okta.OAuth do
+  require Logger
   @moduledoc """
   An implementation of OAuth2 for okta.
 
@@ -16,6 +17,7 @@ defmodule Ueberauth.Strategy.Okta.OAuth do
   @defaults [
     strategy: __MODULE__,
     authorize_url: "/oauth2/v1/authorize",
+    omit_basic: true,
     token_url: "/oauth2/v1/token",
     userinfo_url: "/oauth2/v1/userinfo"
   ]
@@ -39,7 +41,7 @@ defmodule Ueberauth.Strategy.Okta.OAuth do
     client_opts = @defaults
                   |> Keyword.merge(opts)
                   |> Keyword.merge(config)
-
+    Logger.debug("Strategy.Okta.OAuth: client_opts = #{inspect(client_opts, pretty: true)}")
     Client.new(client_opts)
   end
 
