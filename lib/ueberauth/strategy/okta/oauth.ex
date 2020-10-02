@@ -11,6 +11,7 @@ defmodule Ueberauth.Strategy.Okta.OAuth do
   """
   use OAuth2.Strategy
 
+  alias Ueberauth.Strategy.Okta.Client, as: OktaClient
   alias OAuth2.{Client, Strategy.AuthCode}
 
   @defaults [
@@ -58,7 +59,15 @@ defmodule Ueberauth.Strategy.Okta.OAuth do
     |> Client.get(userinfo_url(), headers, opts)
   end
 
-  def get_token(params \\ [], options \\ []), do: Client.get_token(client(options), params)
+  def get_token(params \\ [], options \\ []) do
+    client = Client.get_token(client(options), params)
+    {code, _params} = Keyword.pop(params, :code, client.params["code"])
+    unless code do
+      raise OAuth2.Error, reason: "Missing required key `code` for `#{inspect(__MODULE__)}`"
+    end
+    client
+    |> put_param(:code, code)
+  end
 
   # Strategy Callbacks
 
@@ -69,18 +78,14 @@ defmodule Ueberauth.Strategy.Okta.OAuth do
   end
 
   def get_token(client, params, headers) do
-    {code, params} = Keyword.pop(params, :code, client.params["code"])
-    unless code do
-      raise OAuth2.Error, reason: "Missing required key `code` for `#{inspect(__MODULE__)}`"
-    end
     client
     |> put_header("Accept", "application/json")
-    |> put_param(:code, code)
     |> put_param(:grant_type, "authorization_code")
     |> put_param(:redirect_uri, client.redirect_uri)
     |> merge_params(params)
     |> basic_auth()
     |> put_headers(headers)
+    |> OktaClient.get_token(params, headers)
   end
 
   defp userinfo_url() do
